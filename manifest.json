@@ -1,0 +1,17 @@
+{
+  "name": "廠區消防安全巡檢系統",
+  "short_name": "消防巡檢",
+  "description": "廠區滅火器與室內消防栓箱整合巡檢工具",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2c3e50",
+  "theme_color": "#e74c3c",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
