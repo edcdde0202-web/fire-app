@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>廠區消防安全巡檢系統</title>
     
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json" stroke-replace="none">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="消防巡檢">
-    <link rel="apple-touch-icon" href="icon-192.png">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
@@ -54,10 +53,9 @@
         .ext-wrapper { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -85%) scale(var(--ext-scale)); z-index: 9999; transform-origin: center bottom; pointer-events: auto; }
         .ext-svg-icon { width: 35px; height: 50px; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.3)); }
         
-        /* 亮點定位閃爍動畫 */
         @keyframes pulse-focus {
             0% { transform: translate(-50%, -85%) scale(calc(var(--ext-scale) * 1)); filter: drop-shadow(0 0 0px #f1c40f); }
-            50% { transform: translate(-50%, -85%) scale(calc(var(--ext-scale) * 1.8)); filter: drop-shadow(0 0 20px #f1c40f); }
+            50% { transform: translate(-50%, -85%) scale(calc(var(--ext-scale) * 1.6)); filter: drop-shadow(0 0 15px #f1c40f); }
             100% { transform: translate(-50%, -85%) scale(calc(var(--ext-scale) * 1)); filter: drop-shadow(0 0 0px #f1c40f); }
         }
         .ext-wrapper.focused-node { animation: pulse-focus 0.8s ease-in-out 3; z-index: 100000; }
@@ -70,7 +68,6 @@
         .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 20000; }
         #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 12px; padding: 20px; z-index: 20001; width: 90%; max-width: 360px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
         
-        /* 儀表板彈出清單樣式 */
         #list-modal { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top-left-radius: 16px; border-top-right-radius: 16px; z-index: 15000; max-height: 60vh; overflow-y: auto; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
         .list-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
         .device-item-card { background: #f8f9fa; border: 1px solid #eef2f7; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
@@ -96,7 +93,7 @@
 <body>
 
 <div id="toolbar">
-    <div style="font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 5px;">🚒 廠區消防安全巡檢系統 (動態追蹤版)</div>
+    <div style="font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 5px;">🚒 廠區消防安全巡檢系統 (雲端優化版)</div>
     <label class="btn btn-project-load">📂 1.開啟舊專案<input type="file" id="load-project" accept=".json" style="display:none;"></label>
     <label class="btn btn-upload">📁 新建底圖<input type="file" id="upload" accept="application/pdf, image/*" style="display:none;"></label>
     <button class="btn btn-add-ext" id="add-ext-btn" onclick="toggleAddMode('ext')">🧯 +滅火器</button>
@@ -158,8 +155,9 @@
 </div>
 
 <script>
+    // 防錯：安全註冊 Service Worker，避免阻礙 GitHub Action 編譯
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log('Service Worker 註冊成功')).catch(e => console.log(e));
+        navigator.serviceWorker.register('sw.js').then(() => console.log('PWA Ready')).catch(e => console.log('PWA Skip'));
     }
 
     try { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js'; } catch(e){}
@@ -186,7 +184,6 @@
         ctx.fillText("請點擊左上角『開啟舊專案』直接讀取原始進度", canvas.width / 2, canvas.height / 2);
     }
 
-    // 計算分類狀態
     function getPointStatus(p) {
         let isExpired = false;
         if (p.kind === 'ext' || p.kind === undefined) {
@@ -213,7 +210,6 @@
         document.getElementById('dash-fail').innerText = fail;
     }
 
-    // 點擊儀表板展開對應清單
     function openDashboardList(type) {
         const titleEl = document.getElementById('list-modal-title');
         const containerEl = document.getElementById('dashboard-item-container');
@@ -254,7 +250,6 @@
         document.getElementById('list-overlay').style.display = 'block';
     }
 
-    // 核心技術：點擊項目自動在圖面上平移與縮放定位
     function locateDeviceOnMap(id) {
         closeListModal();
         const p = points.find(node => node.id === id);
@@ -262,22 +257,16 @@
 
         const canvasW = parseFloat(canvas.style.width) || canvas.width;
         const canvasH = parseFloat(canvas.style.height) || canvas.height;
-        
-        // 計算該點位在實體畫布上的像素位置
         const targetX = p.pctX * canvasW;
         const targetY = p.pctY * canvasH;
 
-        // 設定放大倍率
-        mapScale = 1.2;
-        // 平移畫面，將點位移動至手機螢幕正中央
+        mapScale = 1.3;
         mapX = (viewport.clientWidth / 2) - (targetX * mapScale);
         mapY = (viewport.clientHeight / 2) - (targetY * mapScale);
         updateTransform();
 
-        // 觸發對應點位的閃爍動畫
         setTimeout(() => {
             document.querySelectorAll('.ext-wrapper').forEach(el => el.classList.remove('focused-node'));
-            // 比對位置找到對應的 DOM 元素
             document.querySelectorAll('.ext-wrapper').forEach(el => {
                 if(Math.abs(parseFloat(el.style.left) - targetX) < 2 && Math.abs(parseFloat(el.style.top) - targetY) < 2) {
                     el.classList.add('focused-node');
@@ -372,7 +361,7 @@
 
     function renderPoints() {
         const area = document.getElementById('capture-area');
-        document.querySelectorAll('.ext-wrapper').forEach(el => { if(!el.classList.contains('focused-node')) el.remove(); else el.remove(); });
+        document.querySelectorAll('.ext-wrapper').forEach(el => el.remove());
         const canvasW = parseFloat(canvas.style.width) || canvas.width;
         const canvasH = parseFloat(canvas.style.height) || canvas.height;
 
@@ -398,7 +387,7 @@
             function onMove(moveX, moveY) {
                 isDraggingIcon = true;
                 let currentLeft = startLeft + (moveX - startClientX) / mapScale;
-                let currentTop = startTop + (moveY - startClientY) / mapScale;
+                let currentTop = startTop + (moveY - startClientY) / scale;
                 p.pctX = currentLeft / canvasW; p.pctY = currentTop / canvasH;
                 wrapper.style.left = currentLeft + 'px'; wrapper.style.top = currentTop + 'px';
             }
@@ -530,7 +519,7 @@
     function exportProjectJSON() {
         if(!currentMapDataUrl) return;
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ mapImage: currentMapDataUrl, savedPoints: points }));
-        const a = document.createElement('a'); a.href = dataStr; a.download = "廠區消防專案_追蹤更新版.json"; a.click();
+        const a = document.createElement('a'); a.href = dataStr; a.download = "廠區消防專案_雲端版.json"; a.click();
     }
 
     function exportJPG() {
@@ -554,7 +543,6 @@
         }, 300);
     }
 
-    // 匯出功能也將新欄位與新數據一併同步
     function exportExcel() {
         let csv = "\ufeff設施種類,設備名稱,規格,日期清單,巡檢狀態,異常摘要\n";
         points.forEach(p => {
