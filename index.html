@@ -35,15 +35,16 @@
         .range-container { display: flex; align-items: center; gap: 5px; font-size: 12px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 4px; }
         #save-status { font-size: 12px; color: #2ecc71; font-weight: bold; margin-left: auto; }
 
-        /* 巡檢總覽儀表板樣式 */
-        #dashboard { width: 100%; background: #22313f; display: flex; gap: 10px; padding: 8px 12px; font-size: 13px; color: #ecf0f1; border-bottom: 2px solid #1e2a36; flex-wrap: wrap; }
-        .dash-card { flex: 1; min-width: 75px; background: rgba(255,255,255,0.08); padding: 6px 10px; border-radius: 6px; text-align: center; border-left: 4px solid #bdc3c7; }
+        /* 巡檢總覽儀表板 */
+        #dashboard { width: 100%; background: #22313f; display: flex; gap: 8px; padding: 8px 12px; font-size: 12px; color: #ecf0f1; border-bottom: 2px solid #1e2a36; flex-wrap: wrap; z-index: 1001; }
+        .dash-card { flex: 1; min-width: 65px; background: rgba(255,255,255,0.08); padding: 6px 8px; border-radius: 6px; text-align: center; border-left: 4px solid #bdc3c7; cursor: pointer; transition: 0.2s; }
+        .dash-card:active { background: rgba(255,255,255,0.2); }
         .dash-card.total { border-left-color: #3498db; }
         .dash-card.checked { border-left-color: #9b59b6; }
         .dash-card.unchecked { border-left-color: #f1c40f; }
         .dash-card.ok { border-left-color: #2ecc71; }
         .dash-card.fail { border-left-color: #e74c3c; }
-        .dash-num { font-size: 16px; font-weight: bold; margin-top: 2px; }
+        .dash-num { font-size: 15px; font-weight: bold; margin-top: 2px; }
 
         #viewport { flex: 1; overflow: hidden; position: relative; background: #7f8c8d; width: 100%; height: 100%; }
         #pan-zoom-container { position: absolute; top: 0; left: 0; transform-origin: 0 0; display: inline-block; z-index: 1; }
@@ -53,6 +54,14 @@
         .ext-wrapper { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -85%) scale(var(--ext-scale)); z-index: 9999; transform-origin: center bottom; pointer-events: auto; }
         .ext-svg-icon { width: 35px; height: 50px; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.3)); }
         
+        /* 亮點定位閃爍動畫 */
+        @keyframes pulse-focus {
+            0% { transform: translate(-50%, -85%) scale(calc(var(--ext-scale) * 1)); filter: drop-shadow(0 0 0px #f1c40f); }
+            50% { transform: translate(-50%, -85%) scale(calc(var(--ext-scale) * 1.8)); filter: drop-shadow(0 0 20px #f1c40f); }
+            100% { transform: translate(-50%, -85%) scale(calc(var(--ext-scale) * 1)); filter: drop-shadow(0 0 0px #f1c40f); }
+        }
+        .ext-wrapper.focused-node { animation: pulse-focus 0.8s ease-in-out 3; z-index: 100000; }
+
         .status-badge { position: absolute; top: -12px; right: -35px; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10000; }
         .status-ok { background: var(--success); color: white; border: 1px solid white; }
         .status-fail { background: #000; color: #ff3f34; border: 1px solid #ff3f34; }
@@ -61,6 +70,16 @@
         .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 20000; }
         #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 12px; padding: 20px; z-index: 20001; width: 90%; max-width: 360px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
         
+        /* 儀表板彈出清單樣式 */
+        #list-modal { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top-left-radius: 16px; border-top-right-radius: 16px; z-index: 15000; max-height: 60vh; overflow-y: auto; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+        .list-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .device-item-card { background: #f8f9fa; border: 1px solid #eef2f7; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .device-item-card:active { background: #eef2f7; }
+        .device-item-left { display: flex; flex-direction: column; gap: 3px; }
+        .device-item-title { font-weight: bold; color: #2c3e50; font-size: 14px; }
+        .device-item-sub { font-size: 11px; color: #7f8c8d; }
+        .go-locate-btn { background: var(--dark); color: white; font-size: 12px; padding: 4px 8px; border-radius: 4px; pointer-events: none; }
+
         .check-row { border-bottom: 1px solid #eee; padding: 8px 0; }
         .check-header { display: flex; justify-content: space-between; align-items: center; }
         .ox-group button { width: 45px; height: 32px; border: 1px solid #ccc; background: #eee; font-weight: bold; }
@@ -77,7 +96,7 @@
 <body>
 
 <div id="toolbar">
-    <div style="font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 5px;">🚒 廠區消防安全巡檢系統 (儀表板版)</div>
+    <div style="font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 5px;">🚒 廠區消防安全巡檢系統 (動態追蹤版)</div>
     <label class="btn btn-project-load">📂 1.開啟舊專案<input type="file" id="load-project" accept=".json" style="display:none;"></label>
     <label class="btn btn-upload">📁 新建底圖<input type="file" id="upload" accept="application/pdf, image/*" style="display:none;"></label>
     <button class="btn btn-add-ext" id="add-ext-btn" onclick="toggleAddMode('ext')">🧯 +滅火器</button>
@@ -93,11 +112,11 @@
 </div>
 
 <div id="dashboard">
-    <div class="dash-card total"><div>總點位數</div><div class="dash-num" id="dash-total">0</div></div>
-    <div class="dash-card checked"><div>已巡檢</div><div class="dash-num" id="dash-checked" style="color:#9b59b6;">0</div></div>
-    <div class="dash-card unchecked"><div>未巡檢</div><div class="dash-num" id="dash-unchecked" style="color:#f1c40f;">0</div></div>
-    <div class="dash-card ok"><div>巡檢合格</div><div class="dash-num" id="dash-ok" style="color:#2ecc71;">0</div></div>
-    <div class="dash-card fail"><div>不合格/逾期</div><div class="dash-num" id="dash-fail" style="color:#e74c3c;">0</div></div>
+    <div class="dash-card total" onclick="openDashboardList('all')"><div>總點位數</div><div class="dash-num" id="dash-total">0</div></div>
+    <div class="dash-card checked" onclick="openDashboardList('checked')"><div>已巡檢</div><div class="dash-num" id="dash-checked" style="color:#9b59b6;">0</div></div>
+    <div class="dash-card unchecked" onclick="openDashboardList('unchecked')"><div>未巡檢</div><div class="dash-num" id="dash-unchecked" style="color:#f1c40f;">0</div></div>
+    <div class="dash-card ok" onclick="openDashboardList('ok')"><div>巡檢合格</div><div class="dash-num" id="dash-ok" style="color:#2ecc71;">0</div></div>
+    <div class="dash-card fail" onclick="openDashboardList('fail')"><div>不合格/逾期</div><div class="dash-num" id="dash-fail" style="color:#e74c3c;">0</div></div>
 </div>
 
 <div id="viewport">
@@ -106,6 +125,15 @@
             <canvas id="bg-canvas"></canvas>
         </div>
     </div>
+</div>
+
+<div class="overlay" id="list-overlay" onclick="closeListModal()"></div>
+<div id="list-modal">
+    <div class="list-modal-header">
+        <h3 id="list-modal-title" style="margin:0; font-size:16px;">設備清單</h3>
+        <button onclick="closeListModal()" style="border:none; background:none; font-size:18px; font-weight:bold; color:#7f8c8d; padding:4px 10px;">✕</button>
+    </div>
+    <div id="dashboard-item-container"></div>
 </div>
 
 <div class="overlay" id="overlay" onclick="closeModal()"></div>
@@ -158,41 +186,109 @@
         ctx.fillText("請點擊左上角『開啟舊專案』直接讀取原始進度", canvas.width / 2, canvas.height / 2);
     }
 
-    // 計算並刷新儀表板數據
+    // 計算分類狀態
+    function getPointStatus(p) {
+        let isExpired = false;
+        if (p.kind === 'ext' || p.kind === undefined) {
+            if (p.mfgDate && calculateExpiryStatus(p.mfgDate, 3).status === 'expired') isExpired = true;
+        } else if (p.kind === 'hyd') {
+            if (p.hoseDates) p.hoseDates.forEach(d => { if (calculateExpiryStatus(d, 10).status === 'expired') isExpired = true; });
+        }
+        if (isExpired) return 'fail';
+        if (!p.inspected) return 'unchecked';
+        return p.done ? 'ok' : 'fail';
+    }
+
     function updateDashboard() {
-        let total = points.length;
-        let checked = 0;
-        let unchecked = 0;
-        let ok = 0;
-        let fail = 0;
-
+        let total = points.length, checked = 0, unchecked = 0, ok = 0, fail = 0;
         points.forEach(p => {
-            // 檢查是否效期已過期
-            let isExpired = false;
-            if (p.kind === 'ext' || p.kind === undefined) {
-                if (p.mfgDate && calculateExpiryStatus(p.mfgDate, 3).status === 'expired') isExpired = true;
-            } else if (p.kind === 'hyd') {
-                if (p.hoseDates) p.hoseDates.forEach(d => { if (calculateExpiryStatus(d, 10).status === 'expired') isExpired = true; });
-            }
-
-            if (p.inspected) {
-                checked++;
-                if (p.done && !isExpired) ok++;
-                else fail++;
-            } else {
-                unchecked++;
-                if (isExpired) {
-                    // 如果沒巡檢但效期已過期，直接歸類到異常/逾期
-                    fail++;
-                }
-            }
+            let status = getPointStatus(p);
+            if(p.inspected) checked++; else unchecked++;
+            if(status === 'ok') ok++; else if(status === 'fail') fail++;
         });
-
         document.getElementById('dash-total').innerText = total;
         document.getElementById('dash-checked').innerText = checked;
         document.getElementById('dash-unchecked').innerText = unchecked;
         document.getElementById('dash-ok').innerText = ok;
         document.getElementById('dash-fail').innerText = fail;
+    }
+
+    // 點擊儀表板展開對應清單
+    function openDashboardList(type) {
+        const titleEl = document.getElementById('list-modal-title');
+        const containerEl = document.getElementById('dashboard-item-container');
+        containerEl.innerHTML = '';
+
+        let filteredPoints = [];
+        if (type === 'all') { titleEl.innerText = "總點位明細 清單"; filteredPoints = points; }
+        else if (type === 'checked') { titleEl.innerText = "已巡檢設備 清單"; filteredPoints = points.filter(p => p.inspected); }
+        else if (type === 'unchecked') { titleEl.innerText = "未巡檢設備 清單"; filteredPoints = points.filter(p => getPointStatus(p) === 'unchecked'); }
+        else if (type === 'ok') { titleEl.innerText = "巡檢合格 設備清單"; filteredPoints = points.filter(p => getPointStatus(p) === 'ok'); }
+        else if (type === 'fail') { titleEl.innerText = "不合格 / 逾期設備清單"; filteredPoints = points.filter(p => getPointStatus(p) === 'fail'); }
+
+        if (filteredPoints.length === 0) {
+            containerEl.innerHTML = `<div style="text-align:center; color:#95a5a6; padding:20px;">此類別目前沒有任何設備</div>`;
+        } else {
+            filteredPoints.forEach(p => {
+                let statusText = "", statusColor = "";
+                let typeStr = p.kind === 'hyd' ? `${p.hoseCount || 1}條水帶 消防栓` : `${p.type || '20P 乾粉'} 滅火器`;
+                let st = getPointStatus(p);
+                if(st === 'ok') { statusText = "合格"; statusColor = "#2ecc71"; }
+                else if(st === 'unchecked') { statusText = "未巡檢"; statusColor = "#f1c40f"; }
+                else { statusText = "異常/逾期"; statusColor = "#e74c3c"; }
+
+                const card = document.createElement('div');
+                card.className = "device-item-card";
+                card.onclick = () => locateDeviceOnMap(p.id);
+                card.innerHTML = `
+                    <div class="device-item-left">
+                        <div class="device-item-title">${p.name || '未命名'}</div>
+                        <div class="device-item-sub">類型：${typeStr} | 狀態：<span style="color:${statusColor}; font-weight:bold;">${statusText}</span></div>
+                    </div>
+                    <div class="go-locate-btn">🎯 定位</div>
+                `;
+                containerEl.appendChild(card);
+            });
+        }
+        document.getElementById('list-modal').style.display = 'block';
+        document.getElementById('list-overlay').style.display = 'block';
+    }
+
+    // 核心技術：點擊項目自動在圖面上平移與縮放定位
+    function locateDeviceOnMap(id) {
+        closeListModal();
+        const p = points.find(node => node.id === id);
+        if (!p) return;
+
+        const canvasW = parseFloat(canvas.style.width) || canvas.width;
+        const canvasH = parseFloat(canvas.style.height) || canvas.height;
+        
+        // 計算該點位在實體畫布上的像素位置
+        const targetX = p.pctX * canvasW;
+        const targetY = p.pctY * canvasH;
+
+        // 設定放大倍率
+        mapScale = 1.2;
+        // 平移畫面，將點位移動至手機螢幕正中央
+        mapX = (viewport.clientWidth / 2) - (targetX * mapScale);
+        mapY = (viewport.clientHeight / 2) - (targetY * mapScale);
+        updateTransform();
+
+        // 觸發對應點位的閃爍動畫
+        setTimeout(() => {
+            document.querySelectorAll('.ext-wrapper').forEach(el => el.classList.remove('focused-node'));
+            // 比對位置找到對應的 DOM 元素
+            document.querySelectorAll('.ext-wrapper').forEach(el => {
+                if(Math.abs(parseFloat(el.style.left) - targetX) < 2 && Math.abs(parseFloat(el.style.top) - targetY) < 2) {
+                    el.classList.add('focused-node');
+                }
+            });
+        }, 150);
+    }
+
+    function closeListModal() {
+        document.getElementById('list-modal').style.display = 'none';
+        document.getElementById('list-overlay').style.display = 'none';
     }
 
     document.getElementById('load-project').onchange = function(e) {
@@ -221,7 +317,7 @@
                     initDefaultCanvas(); renderPoints(); showStatus(`⚠️ 點位已載入(${points.length}個)，但無底圖`);
                 }
             } catch(err) {
-                alert("專案檔案解析失敗，請確認是否為正確的 JSON 格式");
+                alert("專案檔案解析失敗");
                 showStatus("❌ 載入失敗");
             }
         };
@@ -276,7 +372,7 @@
 
     function renderPoints() {
         const area = document.getElementById('capture-area');
-        document.querySelectorAll('.ext-wrapper').forEach(el => el.remove());
+        document.querySelectorAll('.ext-wrapper').forEach(el => { if(!el.classList.contains('focused-node')) el.remove(); else el.remove(); });
         const canvasW = parseFloat(canvas.style.width) || canvas.width;
         const canvasH = parseFloat(canvas.style.height) || canvas.height;
 
@@ -286,16 +382,14 @@
             wrapper.style.left = (p.pctX * canvasW) + 'px'; wrapper.style.top = (p.pctY * canvasH) + 'px';
             
             let statusHTML = '';
+            let st = getPointStatus(p);
             if (p.kind === 'ext' || p.kind === undefined) {
-                let expiry = calculateExpiryStatus(p.mfgDate, 3);
-                if (expiry.status === 'expired') statusHTML = `<div class="status-badge status-fail">【過期】</div>`;
-                else if (p.inspected) statusHTML = p.done ? `<div class="status-badge status-ok">【合格】</div>` : `<div class="status-badge status-fail">【不合格】</div>`;
+                if (st === 'fail') statusHTML = `<div class="status-badge status-fail">【異常/逾期】</div>`;
+                else if (p.inspected) statusHTML = `<div class="status-badge status-ok">【合格】</div>`;
                 wrapper.innerHTML = `${statusHTML}${extSvgString}<div class="info-label">${p.name || '滅火器'}</div>`;
             } else {
-                let hasExpiredHose = false;
-                if(p.hoseDates) p.hoseDates.forEach(d => { if(calculateExpiryStatus(d, 10).status === 'expired') hasExpiredHose = true; });
-                if (hasExpiredHose) statusHTML = `<div class="status-badge status-fail">【逾期】</div>`;
-                else if (p.inspected) statusHTML = p.done ? `<div class="status-badge status-ok">【合格】</div>` : `<div class="status-badge status-fail">【不合格】</div>`;
+                if (st === 'fail') statusHTML = `<div class="status-badge status-fail">【異常/逾期】</div>`;
+                else if (p.inspected) statusHTML = `<div class="status-badge status-ok">【合格】</div>`;
                 wrapper.innerHTML = `${statusHTML}${hydSvgString}<div class="info-label" style="background:#b30000;">${p.name || '消防栓'}</div>`;
             }
 
@@ -335,7 +429,6 @@
             area.appendChild(wrapper);
         });
 
-        // 每次重新繪製點位時，同步刷新儀表板數字
         updateDashboard();
     }
 
@@ -437,7 +530,7 @@
     function exportProjectJSON() {
         if(!currentMapDataUrl) return;
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ mapImage: currentMapDataUrl, savedPoints: points }));
-        const a = document.createElement('a'); a.href = dataStr; a.download = "廠區消防專案_儀表板更新版.json"; a.click();
+        const a = document.createElement('a'); a.href = dataStr; a.download = "廠區消防專案_追蹤更新版.json"; a.click();
     }
 
     function exportJPG() {
@@ -461,11 +554,12 @@
         }, 300);
     }
 
+    // 匯出功能也將新欄位與新數據一併同步
     function exportExcel() {
         let csv = "\ufeff設施種類,設備名稱,規格,日期清單,巡檢狀態,異常摘要\n";
         points.forEach(p => {
             let notes = []; if(p.notes) { for(let k in p.notes) if(p.notes[k]) notes.push(`${k}:${p.notes[k]}`); }
-            csv += `${p.kind==='ext'?'滅火器':'消防栓'},${p.name||'未命名'},${p.kind==='ext'?p.type:p.hoseCount+'條'},${p.kind==='ext'?p.mfgDate:p.hoseDates.join('|')},${p.inspected?(p.done?'合格':'不合格'):'未巡'},"${notes.join('/')}"\n`;
+            csv += `${p.kind==='ext'?'滅火器':'消防栓'},${p.name||'未命名'},${p.kind==='ext'?p.type:p.hoseCount+'條'},${p.kind==='ext'?p.mfgDate:p.hoseDates.join('|')},${p.inspected?(getPointStatus(p)==='ok'?'合格':'不合格'):'未巡'},"${notes.join('/')}"\n`;
         });
         const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'})); a.download = '巡檢紀錄.csv'; a.click();
     }
