@@ -16,7 +16,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         :root { --primary: #e74c3c; --success: #27ae60; --warning: #e67e22; --dark: #2c3e50; --ext-scale: 1.0; }
-        * { box-sizing: border-box; touch-action: pan-x pan-y; }
+        * { box-sizing: border-box; touch-action: none; }
         body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background: #f0f2f5; display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; -webkit-user-select: none; }
         
         #toolbar { background: var(--dark); color: white; padding: 10px; display: flex; gap: 8px; align-items: center; z-index: 1000; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.2); padding-top: calc(10px + env(safe-area-inset-top)); }
@@ -35,12 +35,12 @@
         .range-container { display: flex; align-items: center; gap: 5px; font-size: 12px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 4px; }
         #save-status { font-size: 12px; color: #2ecc71; font-weight: bold; margin-left: auto; }
 
-        #viewport { flex: 1; overflow: hidden; position: relative; background: #7f8c8d; }
+        #viewport { flex: 1; overflow: hidden; position: relative; background: #7f8c8d; width: 100%; height: 100%; }
         #pan-zoom-container { position: absolute; top: 0; left: 0; transform-origin: 0 0; display: inline-block; z-index: 1; }
         #capture-area { position: relative; display: inline-block; background: white; }
         #bg-canvas { display: block; max-width: none; background: #fff; }
 
-        .ext-wrapper { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -85%) scale(var(--ext-scale)); z-index: 9999; transform-origin: center bottom; }
+        .ext-wrapper { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -85%) scale(var(--ext-scale)); z-index: 9999; transform-origin: center bottom; pointer-events: auto; }
         .ext-svg-icon { width: 35px; height: 50px; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.3)); }
         
         .status-badge { position: absolute; top: -12px; right: -35px; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10000; }
@@ -67,8 +67,8 @@
 <body>
 
 <div id="toolbar">
-    <div style="font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 5px;">🚒 廠區消防安全巡檢系統 (App版)</div>
-    <label class="btn btn-project-load">📂 1.開啟專案<input type="file" id="load-project" accept=".json" style="display:none;"></label>
+    <div style="font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 5px;">🚒 廠區消防安全巡檢系統 (強制修復版)</div>
+    <label class="btn btn-project-load">📂 1.開啟舊專案<input type="file" id="load-project" accept=".json" style="display:none;"></label>
     <label class="btn btn-upload">📁 新建底圖<input type="file" id="upload" accept="application/pdf, image/*" style="display:none;"></label>
     <button class="btn btn-add-ext" id="add-ext-btn" onclick="toggleAddMode('ext')">🧯 +滅火器</button>
     <button class="btn btn-add-hyd" id="add-hyd-btn" onclick="toggleAddMode('hyd')">🏠 +消防栓箱</button>
@@ -112,9 +112,8 @@
 </div>
 
 <script>
-    // 註冊 PWA Service Worker (讓手機離線可用)
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log('Service Worker 註冊成功'));
+        navigator.serviceWorker.register('sw.js').then(() => console.log('Service Worker 註冊成功')).catch(e => console.log(e));
     }
 
     try { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js'; } catch(e){}
@@ -134,49 +133,66 @@
     window.onload = () => { initDefaultCanvas(); updateTransform(); };
 
     function initDefaultCanvas() {
-        canvas.width = 800; canvas.height = 500;
-        canvas.style.width = "800px"; canvas.style.height = "500px";
+        canvas.width = 1000; canvas.height = 650;
+        canvas.style.width = "1000px"; canvas.style.height = "650px";
         ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#2c3e50"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
-        ctx.fillText("請點選『新建底圖』或『開啟專案』開始", canvas.width / 2, canvas.height / 2);
+        ctx.fillText("請點擊左上角『開啟舊專案』直接讀取原始進度", canvas.width / 2, canvas.height / 2);
     }
+
+    // 強制解析並導入原始大專案的防錯機制
+    document.getElementById('load-project').onchange = function(e) {
+        const file = e.target.files[0]; if(!file) return;
+        showStatus("⏳ 正在強制導入大檔案專案...");
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                currentMapDataUrl = data.mapImage || data.mapDataUrl || "";
+                points = data.savedPoints || data.points || [];
+
+                if (currentMapDataUrl) {
+                    const img = new Image();
+                    img.onload = function() {
+                        canvas.width = img.width; canvas.height = img.height;
+                        canvas.style.width = img.width + "px"; canvas.style.height = img.height + "px";
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        renderPoints();
+                        showStatus(`✅ 成功載入！共 ${points.length} 個點位`);
+                        resetView();
+                    };
+                    img.src = currentMapDataUrl;
+                } else {
+                    initDefaultCanvas(); renderPoints(); showStatus(`⚠️ 點位已載入(${points.length}個)，但無底圖`);
+                }
+            } catch(err) {
+                alert("專案檔案解析失敗，請確認是否為正確的 JSON 格式");
+                showStatus("❌ 載入失敗");
+            }
+        };
+        reader.readAsText(file);
+    };
 
     document.getElementById('upload').onchange = function(e) {
         const file = e.target.files[0]; if(!file) return;
-        showStatus("⏳ 圖面載入中...");
-        if (file.type === "application/pdf") {
-            const reader = new FileReader();
-            reader.onload = function() {
-                const typedarray = new Uint8Array(this.result);
-                pdfjsLib.getDocument({ data: typedarray }).promise.then(function(pdf) {
-                    pdf.getPage(1).then(function(page) {
-                        const renderScale = 2.0;
-                        const viewportPage = page.getViewport({ scale: renderScale });
-                        canvas.width = viewportPage.width; canvas.height = viewportPage.height;
-                        canvas.style.width = (viewportPage.width / renderScale) + "px"; canvas.style.height = (viewportPage.height / renderScale) + "px";
-                        page.render({ canvasContext: ctx, viewport: viewportPage }).promise.then(() => {
-                            currentMapDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                            points = []; renderPoints(); showStatus("✅ 底圖載入完成");
-                        });
-                    });
-                });
+        showStatus("⏳ 新底圖載入中...");
+        const reader = new FileReader();
+        reader.onload = (event) => { 
+            const img = new Image();
+            img.onload = function() {
+                canvas.width = img.width; canvas.height = img.height;
+                canvas.style.width = img.width + "px"; canvas.style.height = img.height + "px";
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0); currentMapDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                renderPoints(); showStatus("✅ 新底圖更換成功");
             };
-            reader.readAsArrayBuffer(file);
-        } else {
-            const reader = new FileReader();
-            reader.onload = (event) => { 
-                const img = new Image();
-                img.onload = function() {
-                    canvas.width = img.width; canvas.height = img.height;
-                    canvas.style.width = img.width + "px"; canvas.style.height = img.height + "px";
-                    ctx.drawImage(img, 0, 0); currentMapDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                    points = []; renderPoints(); showStatus("✅ 圖檔載入完成");
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
     };
+
+    function resetView() { mapScale = 0.5; mapX = 10; mapY = 50; updateTransform(); }
 
     function toggleAddMode(type) {
         if (isAddMode && addType === type) { isAddMode = false; addType = ''; } 
@@ -185,7 +201,6 @@
         document.getElementById('add-hyd-btn').classList.toggle('active', addType === 'hyd');
     }
 
-    // 點擊新增點位 (支援滑鼠與手機點擊)
     document.getElementById('capture-area').addEventListener('click', function(e) {
         if (!isAddMode || isDraggingIcon || isPanning) return;
         const rect = canvas.getBoundingClientRect();
@@ -195,14 +210,14 @@
         const clickY = (e.clientY - rect.top) / mapScale;
 
         if (addType === 'ext') {
-            points.push({ id: Date.now(), kind: 'ext', pctX: clickX / canvasW, pctY: clickY / canvasH, name: `滅火器-${points.length+1}`, type: '10P 乾粉', mfgDate: '', inspected: false, done: false, results: {}, notes: {} });
+            points.push({ id: Date.now(), kind: 'ext', pctX: clickX / canvasW, pctY: clickY / canvasH, name: `新滅火器`, type: '10P 乾粉', mfgDate: '', inspected: false, done: false, results: {}, notes: {} });
         } else if (addType === 'hyd') {
-            points.push({ id: Date.now(), kind: 'hyd', pctX: clickX / canvasW, pctY: clickY / canvasH, name: `消防栓-${points.length+1}`, hoseCount: '1', hoseDates: [''], inspected: false, done: false, results: {}, notes: {} });
+            points.push({ id: Date.now(), kind: 'hyd', pctX: clickX / canvasW, pctY: clickY / canvasH, name: `新消防栓`, hoseCount: '1', hoseDates: [''], inspected: false, done: false, results: {}, notes: {} });
         }
         isAddMode = false; addType = '';
         document.getElementById('add-ext-btn').classList.remove('active');
         document.getElementById('add-hyd-btn').classList.remove('active');
-        evaluateAllPointsExpiry(); renderPoints();
+        renderPoints();
     });
 
     function renderPoints() {
@@ -217,22 +232,20 @@
             wrapper.style.left = (p.pctX * canvasW) + 'px'; wrapper.style.top = (p.pctY * canvasH) + 'px';
             
             let statusHTML = '';
-            if (p.kind === 'ext') {
+            if (p.kind === 'ext' || p.kind === undefined) {
                 let expiry = calculateExpiryStatus(p.mfgDate, 3);
                 if (expiry.status === 'expired') statusHTML = `<div class="status-badge status-fail">【過期】</div>`;
                 else if (p.inspected) statusHTML = p.done ? `<div class="status-badge status-ok">【合格】</div>` : `<div class="status-badge status-fail">【不合格】</div>`;
-                wrapper.innerHTML = `${statusHTML}${extSvgString}<div class="info-label">${p.name}</div>`;
+                wrapper.innerHTML = `${statusHTML}${extSvgString}<div class="info-label">${p.name || '滅火器'}</div>`;
             } else {
                 let hasExpiredHose = false;
                 if(p.hoseDates) p.hoseDates.forEach(d => { if(calculateExpiryStatus(d, 10).status === 'expired') hasExpiredHose = true; });
                 if (hasExpiredHose) statusHTML = `<div class="status-badge status-fail">【逾期】</div>`;
                 else if (p.inspected) statusHTML = p.done ? `<div class="status-badge status-ok">【合格】</div>` : `<div class="status-badge status-fail">【不合格】</div>`;
-                wrapper.innerHTML = `${statusHTML}${hydSvgString}<div class="info-label" style="background:#b30000;">${p.name}</div>`;
+                wrapper.innerHTML = `${statusHTML}${hydSvgString}<div class="info-label" style="background:#b30000;">${p.name || '消防栓'}</div>`;
             }
 
-            // 同時支援滑鼠與手機手指拖曳與點擊
-            let startClientX = 0, startClientY = 0;
-            let startLeft = 0, startTop = 0;
+            let startClientX = 0, startClientY = 0, startLeft = 0, startTop = 0;
 
             function onMove(moveX, moveY) {
                 isDraggingIcon = true;
@@ -242,7 +255,6 @@
                 wrapper.style.left = currentLeft + 'px'; wrapper.style.top = currentTop + 'px';
             }
 
-            // 滑鼠事件
             wrapper.addEventListener('mousedown', (e) => {
                 if(e.button!==0 || isAddMode) return; e.stopPropagation(); isDraggingIcon = false;
                 startClientX = e.clientX; startClientY = e.clientY;
@@ -252,7 +264,6 @@
                 document.onmouseup = () => { document.removeEventListener('mousemove', mm); if(!isDraggingIcon) openModal(p); document.onmouseup=null; setTimeout(() => isDraggingIcon=false, 50); };
             });
 
-            // 手機觸控事件 (解決手機App移動點位問題)
             wrapper.addEventListener('touchstart', (e) => {
                 if(isAddMode) return; e.stopPropagation(); isDraggingIcon = false;
                 const t = e.touches[0]; startClientX = t.clientX; startClientY = t.clientY;
@@ -261,7 +272,7 @@
 
             wrapper.addEventListener('touchmove', (e) => {
                 e.stopPropagation(); const t = e.touches[0]; onMove(t.clientX, t.clientY);
-            }, {passive: false});
+            }, {passive: true});
 
             wrapper.addEventListener('touchend', (e) => {
                 e.stopPropagation(); if(!isDraggingIcon) openModal(p); renderPoints(); setTimeout(() => isDraggingIcon=false, 50);
@@ -271,7 +282,7 @@
         });
     }
 
-    // 地圖拖曳與縮放 (手機雙指與單指平移)
+    // 手機平移縮放事件優化
     let lastTouchX = 0, lastTouchY = 0, touchStartDist = 0;
     viewport.addEventListener('touchstart', (e) => {
         if(isAddMode) return;
@@ -285,13 +296,12 @@
             mapX += dx; mapY += dy; lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY; updateTransform();
         } else if(e.touches.length === 2) {
             let dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            let factor = dist / touchStartDist; touchStartDist = dist; mapScale = Math.min(Math.max(0.3, mapScale * factor), 5); updateTransform();
+            let factor = dist / touchStartDist; touchStartDist = dist; mapScale = Math.min(Math.max(0.1, mapScale * factor), 5); updateTransform();
         }
     }, {passive: true});
     viewport.addEventListener('touchend', () => isPanning = false);
 
-    // 電腦滑鼠滾輪與拖曳
-    viewport.onwheel = (e) => { e.preventDefault(); mapScale = Math.min(Math.max(0.2, mapScale * (e.deltaY < 0 ? 1.1 : 1/1.1)), 5); updateTransform(); };
+    viewport.onwheel = (e) => { e.preventDefault(); mapScale = Math.min(Math.max(0.1, mapScale * (e.deltaY < 0 ? 1.1 : 1/1.1)), 5); updateTransform(); };
     viewport.onmousedown = (e) => { if(!isAddMode) { isPanning = true; startX = e.clientX - mapX; startY = e.clientY - mapY; } };
     document.addEventListener('mousemove', (e) => { if(isPanning) { mapX = e.clientX - startX; mapY = e.clientY - startY; updateTransform(); } });
     document.addEventListener('mouseup', () => isPanning = false);
@@ -299,15 +309,14 @@
     function updateTransform() { container.style.transform = `translate(${mapX}px, ${mapY}px) scale(${mapScale})`; }
     function updateIconScale(val) { document.documentElement.style.setProperty('--ext-scale', val); }
 
-    // 巡檢彈窗處理
-    const extCheckItems = ["本體容器", "壓把", "安全插銷", "壓力計", "皮管"];
+    const extCheckItems = ["本體容器", "壓把", "安全插銷", "壓力計", "皮管", "鏽蝕"];
     const hydCheckItems = ["箱體內乾淨", "外無阻擋物", "水瞄狀況", "警示燈恆亮"];
 
     function openModal(p) {
-        currentPoint = p; document.getElementById('m-name').value = p.name;
+        currentPoint = p; document.getElementById('m-name').value = p.name || '';
         const listArea = document.getElementById('check-list-area'); listArea.innerHTML = ''; 
-        if (p.kind === 'ext') {
-            document.getElementById('m-type').value = p.type; document.getElementById('m-mfg-date').value = p.mfgDate || '';
+        if (p.kind === 'ext' || p.kind === undefined) {
+            document.getElementById('m-type').value = p.type || '10P 乾粉'; document.getElementById('m-mfg-date').value = p.mfgDate || '';
             document.getElementById('ext-specs-area').style.display = 'block'; document.getElementById('hyd-specs-area').style.display = 'none';
             extCheckItems.forEach((item, i) => addCheckRow(listArea, item, i+1, p));
             checkExpiryInModal();
@@ -321,7 +330,8 @@
     }
 
     function addCheckRow(targetEl, item, order, p) {
-        const res = p.results[item] || ''; const note = p.notes[item] || '';
+        const res = (p.results && p.results[item]) ? p.results[item] : ''; 
+        const note = (p.notes && p.notes[item]) ? p.notes[item] : '';
         targetEl.innerHTML += `<div class="check-row" data-item="${item}"><div class="check-header"><span>${order}.${item}</span><div class="ox-group"><button class="btn-o ${res==='O'?'active-o':''}" onclick="setOX(this,'O')">O</button><button class="btn-x ${res==='X'?'active-x':''}" onclick="setOX(this,'X')">X</button></div></div><input type="text" class="fail-input" style="display:${res==='X'?'block':'none'};" value="${note}" placeholder="異常描述..."></div>`;
     }
 
@@ -338,7 +348,11 @@
     function saveCheck() {
         currentPoint.name = document.getElementById('m-name').value || "未命名";
         let allOk = true, anyMarked = false;
-        if (currentPoint.kind === 'ext') {
+        if (!currentPoint.results) currentPoint.results = {};
+        if (!currentPoint.notes) currentPoint.notes = {};
+
+        if (currentPoint.kind === 'ext' || currentPoint.kind === undefined) {
+            currentPoint.kind = 'ext';
             currentPoint.type = document.getElementById('m-type').value; currentPoint.mfgDate = document.getElementById('m-mfg-date').value;
             document.querySelectorAll('.check-row').forEach(row => {
                 const item = row.getAttribute('data-item'); const isO = row.querySelector('.btn-o').classList.contains('active-o'), isX = row.querySelector('.btn-x').classList.contains('active-x');
@@ -360,22 +374,21 @@
     function calculateExpiryStatus(dStr, limit) { if(!dStr) return {status:'normal'}; let today=new Date(), mfg=new Date(dStr); mfg.setFullYear(mfg.getFullYear()+limit); return (today>=mfg)?{status:'expired'}:{status:'normal'}; }
     function checkHydHoseExpiryInModal() { let exp=false; document.querySelectorAll('.m-hyd-date-input').forEach(i => { if(i.value && calculateExpiryStatus(i.value,10).status==='expired') exp=true; }); document.getElementById('hyd-expiry-msg').innerText = exp?"❌ 有水帶逾期(10年)":"✅ 效期正常"; }
     function checkExpiryInModal() { let d=document.getElementById('m-mfg-date').value; document.getElementById('modal-expiry-msg').innerText = (d && calculateExpiryStatus(d,3).status==='expired')?"❌ 已超3年效期":"✅ 效期正常"; }
-    function evaluateAllPointsExpiry() { points.forEach(p => { if(p.kind==='ext'&&p.mfgDate) { if(calculateExpiryStatus(p.mfgDate,3).status==='expired'){ p.inspected=true; p.done=false; } } else if(p.kind==='hyd'&&p.hoseDates){ p.hoseDates.forEach(d=>{if(calculateExpiryStatus(d,10).status==='expired'){ p.inspected=true; p.done=false; }}) } }); }
-    function closeModal() { document.getElementById('modal').style.display='none'; document.getElementById('overlay').style.display='none'; evaluateAllPointsExpiry(); renderPoints(); }
+    function closeModal() { document.getElementById('modal').style.display='none'; document.getElementById('overlay').style.display='none'; renderPoints(); }
     function deletePoint() { if(confirm('確定刪除？')) { points = points.filter(p => p.id !== currentPoint.id); closeModal(); } }
     function showStatus(t) { statusTxt.innerText = t; }
 
     function exportProjectJSON() {
         if(!currentMapDataUrl) return;
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ mapImage: currentMapDataUrl, canvasStyleW: canvas.style.width, canvasStyleH: canvas.style.height, canvasW: canvas.width, canvasH: canvas.height, savedPoints: points }));
-        const a = document.createElement('a'); a.href = dataStr; a.download = "消防專案_"+new Date().toISOString().slice(0,10)+".json"; a.click();
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ mapImage: currentMapDataUrl, savedPoints: points }));
+        const a = document.createElement('a'); a.href = dataStr; a.download = "廠區消防專案_手機更新版.json"; a.click();
     }
 
     function exportJPG() {
         showStatus("⏳ 出圖中..."); const oldS = mapScale, oldX = mapX, oldY = mapY; mapScale = 1; mapX = 0; mapY = 0; updateTransform();
         setTimeout(() => {
-            html2canvas(document.getElementById('capture-area'), { useCORS: true, scale: 2 }).then(res => {
-                const a = document.createElement('a'); a.download = '巡檢圖.jpg'; a.href = res.toDataURL('image/jpeg', 0.9); a.click();
+            html2canvas(document.getElementById('capture-area'), { useCORS: true, scale: 1.5 }).then(res => {
+                const a = document.createElement('a'); a.download = '巡檢圖.jpg'; a.href = res.toDataURL('image/jpeg', 0.85); a.click();
                 mapScale = oldS; mapX = oldX; mapY = oldY; updateTransform(); showStatus("✅ 已匯出JPG");
             });
         }, 300);
@@ -384,9 +397,9 @@
     function exportPDF() {
         showStatus("⏳ 產生PDF..."); const oldS = mapScale, oldX = mapX, oldY = mapY; mapScale = 1; mapX = 0; mapY = 0; updateTransform();
         setTimeout(() => {
-            html2canvas(document.getElementById('capture-area'), { useCORS: true, scale: 2 }).then(res => {
-                const { jsPDF } = window.jspdf; const pdf = new jsPDF('l', 'px', [res.width/2, res.height/2]);
-                pdf.addImage(res.toDataURL('image/png'), 'PNG', 0, 0, res.width/2, res.height/2); pdf.save("巡檢圖.pdf");
+            html2canvas(document.getElementById('capture-area'), { useCORS: true, scale: 1.5 }).then(res => {
+                const { jsPDF } = window.jspdf; const pdf = new jsPDF('l', 'px', [res.width, res.height]);
+                pdf.addImage(res.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, res.width, res.height); pdf.save("巡檢圖.pdf");
                 mapScale = oldS; mapX = oldX; mapY = oldY; updateTransform(); showStatus("✅ 已匯出PDF");
             });
         }, 300);
@@ -395,8 +408,8 @@
     function exportExcel() {
         let csv = "\ufeff設施種類,設備名稱,規格,日期清單,巡檢狀態,異常摘要\n";
         points.forEach(p => {
-            let notes = []; for(let k in p.notes) if(p.notes[k]) notes.push(`${k}:${p.notes[k]}`);
-            csv += `${p.kind==='ext'?'滅火器':'消防栓'},${p.name},${p.kind==='ext'?p.type:p.hoseCount+'條'},${p.kind==='ext'?p.mfgDate:p.hoseDates.join('|')},${p.inspected?(p.done?'合格':'不合格'):'未巡'},"${notes.join('/')}"\n`;
+            let notes = []; if(p.notes) { for(let k in p.notes) if(p.notes[k]) notes.push(`${k}:${p.notes[k]}`); }
+            csv += `${p.kind==='ext'?'滅火器':'消防栓'},${p.name||'未命名'},${p.kind==='ext'?p.type:p.hoseCount+'條'},${p.kind==='ext'?p.mfgDate:p.hoseDates.join('|')},${p.inspected?(p.done?'合格':'不合格'):'未巡'},"${notes.join('/')}"\n`;
         });
         const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'})); a.download = '巡檢紀錄.csv'; a.click();
     }
