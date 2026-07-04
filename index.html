@@ -35,6 +35,16 @@
         .range-container { display: flex; align-items: center; gap: 5px; font-size: 12px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 4px; }
         #save-status { font-size: 12px; color: #2ecc71; font-weight: bold; margin-left: auto; }
 
+        /* 巡檢總覽儀表板樣式 */
+        #dashboard { width: 100%; background: #22313f; display: flex; gap: 10px; padding: 8px 12px; font-size: 13px; color: #ecf0f1; border-bottom: 2px solid #1e2a36; flex-wrap: wrap; }
+        .dash-card { flex: 1; min-width: 75px; background: rgba(255,255,255,0.08); padding: 6px 10px; border-radius: 6px; text-align: center; border-left: 4px solid #bdc3c7; }
+        .dash-card.total { border-left-color: #3498db; }
+        .dash-card.checked { border-left-color: #9b59b6; }
+        .dash-card.unchecked { border-left-color: #f1c40f; }
+        .dash-card.ok { border-left-color: #2ecc71; }
+        .dash-card.fail { border-left-color: #e74c3c; }
+        .dash-num { font-size: 16px; font-weight: bold; margin-top: 2px; }
+
         #viewport { flex: 1; overflow: hidden; position: relative; background: #7f8c8d; width: 100%; height: 100%; }
         #pan-zoom-container { position: absolute; top: 0; left: 0; transform-origin: 0 0; display: inline-block; z-index: 1; }
         #capture-area { position: relative; display: inline-block; background: white; }
@@ -67,7 +77,7 @@
 <body>
 
 <div id="toolbar">
-    <div style="font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 5px;">🚒 廠區消防安全巡檢系統 (強制修復版)</div>
+    <div style="font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 5px;">🚒 廠區消防安全巡檢系統 (儀表板版)</div>
     <label class="btn btn-project-load">📂 1.開啟舊專案<input type="file" id="load-project" accept=".json" style="display:none;"></label>
     <label class="btn btn-upload">📁 新建底圖<input type="file" id="upload" accept="application/pdf, image/*" style="display:none;"></label>
     <button class="btn btn-add-ext" id="add-ext-btn" onclick="toggleAddMode('ext')">🧯 +滅火器</button>
@@ -80,6 +90,14 @@
         <input type="range" id="icon-scale-slider" min="0.4" max="2.0" step="0.1" value="1.0" oninput="updateIconScale(this.value)">
     </div>
     <div id="save-status">⚙️ 就緒</div>
+</div>
+
+<div id="dashboard">
+    <div class="dash-card total"><div>總點位數</div><div class="dash-num" id="dash-total">0</div></div>
+    <div class="dash-card checked"><div>已巡檢</div><div class="dash-num" id="dash-checked" style="color:#9b59b6;">0</div></div>
+    <div class="dash-card unchecked"><div>未巡檢</div><div class="dash-num" id="dash-unchecked" style="color:#f1c40f;">0</div></div>
+    <div class="dash-card ok"><div>巡檢合格</div><div class="dash-num" id="dash-ok" style="color:#2ecc71;">0</div></div>
+    <div class="dash-card fail"><div>不合格/逾期</div><div class="dash-num" id="dash-fail" style="color:#e74c3c;">0</div></div>
 </div>
 
 <div id="viewport">
@@ -130,7 +148,7 @@
     const extSvgString = `<svg class="ext-svg-icon" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg"><path d="M48,32 L95,8 C95,8 90,0 80,4 L48,22 Z" fill="#4a4a4a"/><path d="M48,35 L88,35 C88,35 88,25 78,27 L48,27 Z" fill="#5a5a5a"/><circle cx="48" cy="30" r="12" fill="#e0e0e0" stroke="#4a4a4a" stroke-width="2"/><path d="M38,30 A10,10 0 0,1 58,30" fill="none" stroke="#e74c3c" stroke-width="3"/><line x1="48" y1="30" x2="48" y2="22" stroke="#4a4a4a" stroke-width="2"/><path d="M40,26 C15,26 15,130 22,130" fill="none" stroke="#4a4a4a" stroke-width="8" stroke-linecap="round"/><polygon points="12,130 32,130 38,170 6,170" fill="#4a4a4a"/><rect x="40" y="38" width="16" height="12" fill="#bbb"/><rect x="34" y="48" width="52" height="140" rx="24" fill="#e74c3c"/><rect x="40" y="85" width="40" height="82" rx="6" fill="#f5f5f5"/><line x1="46" y1="98" x2="74" y2="98" stroke="#4a4a4a" stroke-width="4" stroke-linecap="round"/><line x1="46" y1="108" x2="74" y2="108" stroke="#4a4a4a" stroke-width="4" stroke-linecap="round"/><path d="M60,120 C50,132 50,154 60,158 C70,154 70,132 60,120 Z" fill="#e74c3c"/><path d="M60,132 C54,140 54,152 60,155 C66,152 66,140 60,132 Z" fill="#f1c40f"/></svg>`;
     const hydSvgString = `<svg class="ext-svg-icon" viewBox="0 0 100 160" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="5" width="90" height="150" fill="#b30000" rx="2" stroke="#7a0000" stroke-width="2"/><rect x="8" y="8" width="84" height="144" fill="#d60000" rx="1"/><line x1="8" y1="42" x2="92" y2="42" stroke="#7a0000" stroke-width="1.5"/><circle cx="26" cy="25" r="11" fill="#b30000" stroke="#7a0000" stroke-width="1"/><circle cx="26" cy="25" r="7" fill="#1a1a1a"/><rect x="22" y="21" width="8" height="2" fill="#fff"/><text x="26" y="27" font-family="sans-serif" font-size="3" fill="#fff" text-anchor="middle" font-weight="bold">PUSH</text><circle cx="50" cy="25" r="7" fill="#ff4d4d" stroke="#ffb3b3" stroke-width="1"/><circle cx="50" cy="25" r="4" fill="#ff9999"/><circle cx="74" cy="25" r="8" fill="none" stroke="#7a0000" stroke-dasharray="2,2" stroke-width="1.5"/><circle cx="74" cy="25" r="5" fill="none" stroke="#7a0000" stroke-dasharray="1,1" stroke-width="1"/><circle cx="74" cy="25" r="1.5" fill="#1a1a1a"/><rect x="12" y="48" width="76" height="98" fill="#c40000" rx="1"/><path d="M12,48 L22,48 L22,146 L12,146 Z" fill="#990000" opacity="0.3"/><text x="50" y="98" font-family="Georgia, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">HYDRANT</text><rect x="95" y="45" width="5" height="10" fill="#990000"/><rect x="95" y="115" width="5" height="10" fill="#990000"/></svg>`;
 
-    window.onload = () => { initDefaultCanvas(); updateTransform(); };
+    window.onload = () => { initDefaultCanvas(); updateTransform(); updateDashboard(); };
 
     function initDefaultCanvas() {
         canvas.width = 1000; canvas.height = 650;
@@ -140,7 +158,43 @@
         ctx.fillText("請點擊左上角『開啟舊專案』直接讀取原始進度", canvas.width / 2, canvas.height / 2);
     }
 
-    // 強制解析並導入原始大專案的防錯機制
+    // 計算並刷新儀表板數據
+    function updateDashboard() {
+        let total = points.length;
+        let checked = 0;
+        let unchecked = 0;
+        let ok = 0;
+        let fail = 0;
+
+        points.forEach(p => {
+            // 檢查是否效期已過期
+            let isExpired = false;
+            if (p.kind === 'ext' || p.kind === undefined) {
+                if (p.mfgDate && calculateExpiryStatus(p.mfgDate, 3).status === 'expired') isExpired = true;
+            } else if (p.kind === 'hyd') {
+                if (p.hoseDates) p.hoseDates.forEach(d => { if (calculateExpiryStatus(d, 10).status === 'expired') isExpired = true; });
+            }
+
+            if (p.inspected) {
+                checked++;
+                if (p.done && !isExpired) ok++;
+                else fail++;
+            } else {
+                unchecked++;
+                if (isExpired) {
+                    // 如果沒巡檢但效期已過期，直接歸類到異常/逾期
+                    fail++;
+                }
+            }
+        });
+
+        document.getElementById('dash-total').innerText = total;
+        document.getElementById('dash-checked').innerText = checked;
+        document.getElementById('dash-unchecked').innerText = unchecked;
+        document.getElementById('dash-ok').innerText = ok;
+        document.getElementById('dash-fail').innerText = fail;
+    }
+
     document.getElementById('load-project').onchange = function(e) {
         const file = e.target.files[0]; if(!file) return;
         showStatus("⏳ 正在強制導入大檔案專案...");
@@ -280,9 +334,11 @@
 
             area.appendChild(wrapper);
         });
+
+        // 每次重新繪製點位時，同步刷新儀表板數字
+        updateDashboard();
     }
 
-    // 手機平移縮放事件優化
     let lastTouchX = 0, lastTouchY = 0, touchStartDist = 0;
     viewport.addEventListener('touchstart', (e) => {
         if(isAddMode) return;
@@ -381,7 +437,7 @@
     function exportProjectJSON() {
         if(!currentMapDataUrl) return;
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ mapImage: currentMapDataUrl, savedPoints: points }));
-        const a = document.createElement('a'); a.href = dataStr; a.download = "廠區消防專案_手機更新版.json"; a.click();
+        const a = document.createElement('a'); a.href = dataStr; a.download = "廠區消防專案_儀表板更新版.json"; a.click();
     }
 
     function exportJPG() {
