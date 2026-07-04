@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>廠區消防安全巡檢系統</title>
+    <title>廠區消防安全巡檢系統 - 每月歷史紀錄版</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="消防巡檢">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
@@ -27,12 +26,15 @@
         .btn-add-ext.active { background: #fff; color: #e74c3c; box-shadow: 0 0 10px #e74c3c; }
         .btn-add-hyd { background: #d35400; color: white; }
         .btn-add-hyd.active { background: #fff; color: #d35400; box-shadow: 0 0 10px #d35400; }
+        .btn-new-month { background: #e67e22; color: white; }
         .btn-jpg { background: #2ecc71; color: white; }
-        .btn-pdf { background: #e67e22; color: white; }
-        .btn-excel { background: #3498db; color: white; }
         
         .range-container { display: flex; align-items: center; gap: 5px; font-size: 12px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 4px; }
         #save-status { font-size: 12px; color: #2ecc71; font-weight: bold; margin-left: auto; }
+
+        /* 月份切換區 */
+        #month-bar { background: #1e2a36; padding: 6px 12px; display: flex; align-items: center; gap: 10px; color: white; font-size: 13px; z-index: 1001; }
+        #month-select { padding: 4px 8px; border-radius: 4px; border: none; background: #fff; color: #333; font-weight: bold; }
 
         /* 巡檢總覽儀表板 */
         #dashboard { width: 100%; background: #22313f; display: flex; gap: 8px; padding: 8px 12px; font-size: 12px; color: #ecf0f1; border-bottom: 2px solid #1e2a36; flex-wrap: wrap; z-index: 1001; }
@@ -56,7 +58,7 @@
         .ext-svg-icon { width: 35px; height: 50px; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.3)); }
         
         @keyframes pulse-focus {
-            0 { transform: translate(-50%, -85%) scale(calc(var(--ext-scale) * 1)); filter: drop-shadow(0 0 0px #f1c40f); }
+            0% { transform: translate(-50%, -85%) scale(calc(var(--ext-scale) * 1)); filter: drop-shadow(0 0 0px #f1c40f); }
             50% { transform: translate(-50%, -85%) scale(calc(var(--ext-scale) * 1.6)); filter: drop-shadow(0 0 15px #f1c40f); }
             100% { transform: translate(-50%, -85%) scale(calc(var(--ext-scale) * 1)); filter: drop-shadow(0 0 0px #f1c40f); }
         }
@@ -67,22 +69,18 @@
         .status-fail { background: #000; color: #ff3f34; border: 1px solid #ff3f34; }
         .info-label { margin-top: 4px; background: rgba(0,0,0,0.85); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; text-align: center; white-space: nowrap; }
 
-        /* 👑 修正核心：全局獨立遮罩，隔離地圖滑動事件干擾 */
+        /* 全域獨立遮罩與中央彈窗 */
         .global-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.55); z-index: 50000; touch-action: auto; }
-        
-        /* 👑 明細清單改為中央高權重彈窗，防止斷頭反灰 */
-        #list-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 14px; z-index: 55001; width: 92%; max-width: 420px; max-height: 75vh; overflow-y: auto; box-shadow: 0 12px 36px rgba(0,0,0,0.4); padding: 18px; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+        #list-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 14px; z-index: 55001; width: 92%; max-width: 420px; max-height: 75vh; overflow-y: auto; box-shadow: 0 12px 36px rgba(0,0,0,0.4); padding: 18px; touch-action: pan-y; }
         .list-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; position: sticky; top: 0; background: white; z-index: 10; }
         
-        /* 👑 提高列表內卡片的可點擊區域與反饋 */
         .device-item-card { background: #f8f9fa; border: 1px solid #eef2f7; padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.15s; }
         .device-item-card:hover, .device-item-card:active { background: #eef2f7; border-color: #cbd5e1; }
         .device-item-left { display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
         .device-item-title { font-weight: bold; color: #2c3e50; font-size: 14px; }
         .device-item-sub { font-size: 11px; color: #7f8c8d; }
-        .go-locate-btn { background: var(--dark); color: white; font-size: 12px; padding: 6px 12px; border-radius: 4px; pointer-events: none; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .go-locate-btn { background: var(--dark); color: white; font-size: 12px; padding: 6px 12px; border-radius: 4px; pointer-events: none; font-weight: bold; }
 
-        /* 巡檢細節彈窗 */
         #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 12px; padding: 20px; z-index: 55002; width: 90%; max-width: 380px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.4); touch-action: auto; }
         
         .check-row { border-bottom: 1px solid #eee; padding: 8px 0; }
@@ -101,19 +99,24 @@
 <body>
 
 <div id="toolbar">
-    <div style="font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 5px;">🚒 廠區消防安全巡檢系統 (視窗層級修復版)</div>
+    <div style="font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 5px;">🚒 廠區消防安全巡檢系統 (每月歷史紀錄版)</div>
     <label class="btn btn-project-load">📂 1.開啟舊專案<input type="file" id="load-project" accept=".json" style="display:none;"></label>
     <label class="btn btn-upload">📁 新建底圖<input type="file" id="upload" accept="application/pdf, image/*" style="display:none;"></label>
     <button class="btn btn-add-ext" id="add-ext-btn" onclick="toggleAddMode('ext')">🧯 +滅火器</button>
     <button class="btn btn-add-hyd" id="add-hyd-btn" onclick="toggleAddMode('hyd')">🏠 +消防栓箱</button>
+    <button class="btn btn-new-month" onclick="createNewMonthInspection()">📅 開啟新月份巡檢</button>
     <button class="btn btn-project-save" onclick="exportProjectJSON()">💾 3.另存專案</button>
     <button class="btn btn-jpg" onclick="exportJPG()">🖼️ 出圖</button>
-    <button class="btn btn-pdf" onclick="exportPDF()">📄 PDF</button>
-    <button class="btn btn-excel" onclick="exportExcel()">📊 報表</button>
     <div class="range-container">
         <input type="range" id="icon-scale-slider" min="0.4" max="2.0" step="0.1" value="1.0" oninput="updateIconScale(this.value)">
     </div>
     <div id="save-status">⚙️ 就緒</div>
+</div>
+
+<div id="month-bar">
+    <span>歷史期別複查：</span>
+    <select id="month-select" onchange="switchMonth(this.value)"></select>
+    <span id="month-notice" style="color: #f1c40f; font-size: 12px;"></span>
 </div>
 
 <div id="dashboard">
@@ -158,18 +161,15 @@
         </div>
     </div>
     <div id="check-list-area"></div>
-    <button class="save-btn" onclick="saveCheck()">儲存巡檢紀錄</button>
-    <button onclick="deletePoint()" style="width:100%; margin-top:10px; background:none; border:none; color:#ae1c1c; font-weight:bold; cursor:pointer;">✕ 刪除點位</button>
+    <button class="save-btn" id="modal-save-btn" onclick="saveCheck()">儲存巡檢紀錄</button>
+    <button id="modal-delete-btn" onclick="deletePoint()" style="width:100%; margin-top:10px; background:none; border:none; color:#ae1c1c; font-weight:bold; cursor:pointer;">✕ 刪除點位</button>
 </div>
 
 <script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log('PWA Ready')).catch(e => console.log('PWA Skip'));
-    }
-
-    try { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js'; } catch(e){}
-
-    let points = [], currentPoint = null, isDraggingIcon = false, isAddMode = false, addType = '', currentMapDataUrl = ""; 
+    let currentMonth = ""; 
+    let monthlyRecords = {}; // 👑 格式：{"2026-06": [points...], "2026-07": [points...]}
+    let points = []; 
+    let currentPoint = null, isDraggingIcon = false, isAddMode = false, addType = '', currentMapDataUrl = ""; 
     let mapScale = 1, mapX = 0, mapY = 0, isPanning = false, startX, startY;
 
     const viewport = document.getElementById('viewport');
@@ -181,14 +181,92 @@
     const extSvgString = `<svg class="ext-svg-icon" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg"><path d="M48,32 L95,8 C95,8 90,0 80,4 L48,22 Z" fill="#4a4a4a"/><path d="M48,35 L88,35 C88,35 88,25 78,27 L48,27 Z" fill="#5a5a5a"/><circle cx="48" cy="30" r="12" fill="#e0e0e0" stroke="#4a4a4a" stroke-width="2"/><path d="M38,30 A10,10 0 0,1 58,30" fill="none" stroke="#e74c3c" stroke-width="3"/><line x1="48" y1="30" x2="48" y2="22" stroke="#4a4a4a" stroke-width="2"/><path d="M40,26 C15,26 15,130 22,130" fill="none" stroke="#4a4a4a" stroke-width="8" stroke-linecap="round"/><polygon points="12,130 32,130 38,170 6,170" fill="#4a4a4a"/><rect x="40" y="38" width="16" height="12" fill="#bbb"/><rect x="34" y="48" width="52" height="140" rx="24" fill="#e74c3c"/><rect x="40" y="85" width="40" height="82" rx="6" fill="#f5f5f5"/><line x1="46" y1="98" x2="74" y2="98" stroke="#4a4a4a" stroke-width="4" stroke-linecap="round"/><line x1="46" y1="108" x2="74" y2="108" stroke="#4a4a4a" stroke-width="4" stroke-linecap="round"/><path d="M60,120 C50,132 50,154 60,158 C70,154 70,132 60,120 Z" fill="#e74c3c"/><path d="M60,132 C54,140 54,152 60,155 C66,152 66,140 60,132 Z" fill="#f1c40f"/></svg>`;
     const hydSvgString = `<svg class="ext-svg-icon" viewBox="0 0 100 160" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="5" width="90" height="150" fill="#b30000" rx="2" stroke="#7a0000" stroke-width="2"/><rect x="8" y="8" width="84" height="144" fill="#d60000" rx="1"/><line x1="8" y1="42" x2="92" y2="42" stroke="#7a0000" stroke-width="1.5"/><circle cx="26" cy="25" r="11" fill="#b30000" stroke="#7a0000" stroke-width="1"/><circle cx="26" cy="25" r="7" fill="#1a1a1a"/><rect x="22" y="21" width="8" height="2" fill="#fff"/><text x="26" y="27" font-family="sans-serif" font-size="3" fill="#fff" text-anchor="middle" font-weight="bold">PUSH</text><circle cx="50" cy="25" r="7" fill="#ff4d4d" stroke="#ffb3b3" stroke-width="1"/><circle cx="50" cy="25" r="4" fill="#ff9999"/><circle cx="74" cy="25" r="8" fill="none" stroke="#7a0000" stroke-dasharray="2,2" stroke-width="1.5"/><circle cx="74" cy="25" r="5" fill="none" stroke="#7a0000" stroke-dasharray="1,1" stroke-width="1"/><circle cx="74" cy="25" r="1.5" fill="#1a1a1a"/><rect x="12" y="48" width="76" height="98" fill="#c40000" rx="1"/><path d="M12,48 L22,48 L22,146 L12,146 Z" fill="#990000" opacity="0.3"/><text x="50" y="98" font-family="Georgia, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">HYDRANT</text><rect x="95" y="45" width="5" height="10" fill="#990000"/><rect x="95" y="115" width="5" height="10" fill="#990000"/></svg>`;
 
-    window.onload = () => { initDefaultCanvas(); updateTransform(); updateDashboard(); };
+    window.onload = () => {
+        initDefaultCanvas();
+        initCurrentMonth();
+        updateTransform();
+    };
 
     function initDefaultCanvas() {
         canvas.width = 1000; canvas.height = 650;
         canvas.style.width = "1000px"; canvas.style.height = "650px";
         ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#2c3e50"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
-        ctx.fillText("請點擊左上角『開啟舊專案』直接讀取原始進度", canvas.width / 2, canvas.height / 2);
+        ctx.fillText("請點擊左上角『開啟舊專案』導入巡檢檔案", canvas.width / 2, canvas.height / 2);
+    }
+
+    // 👑 獲取目前真實的年月份
+    function initCurrentMonth() {
+        let d = new Date();
+        let m = (d.getMonth() + 1).toString().padStart(2, '0');
+        currentMonth = `${d.getFullYear()}-${m}`;
+        if (!monthlyRecords[currentMonth]) {
+            monthlyRecords[currentMonth] = [];
+        }
+        points = monthlyRecords[currentMonth];
+        refreshMonthSelect();
+    }
+
+    function refreshMonthSelect() {
+        const select = document.getElementById('month-select');
+        select.innerHTML = "";
+        Object.keys(monthlyRecords).sort().reverse().forEach(m => {
+            let opt = document.createElement('option');
+            opt.value = m;
+            opt.innerText = m === currentMonth ? `${m} (本月進行中)` : `${m} (歷史紀錄)`;
+            select.appendChild(opt);
+        });
+        select.value = currentMonth;
+        checkMonthLockStatus();
+    }
+
+    // 👑 開啟新的一月，自動複製上個月的「點位跟位置」，但把「巡檢結果勾選清空」
+    function createNewMonthInspection() {
+        let res = prompt("請輸入要開啟的全新巡檢月份(格式如 2026-08)：");
+        if(!res) return;
+        if(!/^\d{4}-\d{2}$/.test(res)) { alert("格式錯誤！請輸入 YYYY-MM 格式"); return; }
+        
+        if (monthlyRecords[res]) {
+            alert("該月份巡檢已經存在！已直接為您切換。");
+            switchMonth(res);
+            return;
+        }
+
+        // 複製現有月份的所有設備作為新月份的「總台帳基底」
+        let basePoints = points.map(p => {
+            return {
+                id: p.id, kind: p.kind, pctX: p.pctX, pctY: p.pctY, name: p.name, type: p.type, mfgDate: p.mfgDate,
+                hoseCount: p.hoseCount, hoseDates: p.hoseDates,
+                inspected: false, done: false, results: {}, notes: {} // 👑 重要：清空檢查狀態
+            };
+        });
+
+        monthlyRecords[res] = basePoints;
+        switchMonth(res);
+        alert(`🎉 成功建立 ${res} 月全新消防巡檢表！所有設備已重設為『未巡檢』狀態。`);
+    }
+
+    function switchMonth(m) {
+        currentMonth = m;
+        points = monthlyRecords[m] || [];
+        checkMonthLockStatus();
+        renderPoints();
+    }
+
+    function checkMonthLockStatus() {
+        let d = new Date();
+        let thisMonthStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+        const notice = document.getElementById('month-notice');
+        
+        if (currentMonth !== thisMonthStr) {
+            notice.innerText = "⚠️ 目前查閱的是【歷史紀錄】，無法新增、刪除點位或修改紀錄。";
+            document.getElementById('add-ext-btn').style.display = 'none';
+            document.getElementById('add-hyd-btn').style.display = 'none';
+        } else {
+            notice.innerText = "🍏 目前正在進行【本月定期巡檢】，可正常勾選。";
+            document.getElementById('add-ext-btn').style.display = 'inline-block';
+            document.getElementById('add-hyd-btn').style.display = 'inline-block';
+        }
     }
 
     function getPointStatus(p) {
@@ -223,11 +301,11 @@
         containerEl.innerHTML = '';
 
         let filteredPoints = [];
-        if (type === 'all') { titleEl.innerText = "總點位明細 清單"; filteredPoints = points; }
-        else if (type === 'checked') { titleEl.innerText = "已巡檢設備 清單"; filteredPoints = points.filter(p => p.inspected); }
-        else if (type === 'unchecked') { titleEl.innerText = "未巡檢設備 清單"; filteredPoints = points.filter(p => getPointStatus(p) === 'unchecked'); }
-        else if (type === 'ok') { titleEl.innerText = "巡檢合格 設備清單"; filteredPoints = points.filter(p => getPointStatus(p) === 'ok'); }
-        else if (type === 'fail') { titleEl.innerText = "不合格 / 逾期設備清單"; filteredPoints = points.filter(p => getPointStatus(p) === 'fail'); }
+        if (type === 'all') { titleEl.innerText = `${currentMonth} 總點位明細`; filteredPoints = points; }
+        else if (type === 'checked') { titleEl.innerText = `${currentMonth} 已巡檢明細`; filteredPoints = points.filter(p => p.inspected); }
+        else if (type === 'unchecked') { titleEl.innerText = `${currentMonth} 未巡檢明細`; filteredPoints = points.filter(p => getPointStatus(p) === 'unchecked'); }
+        else if (type === 'ok') { titleEl.innerText = `${currentMonth} 巡檢合格清單`; filteredPoints = points.filter(p => getPointStatus(p) === 'ok'); }
+        else if (type === 'fail') { titleEl.innerText = `${currentMonth} 不合格/逾期清單`; filteredPoints = points.filter(p => getPointStatus(p) === 'fail'); }
 
         if (filteredPoints.length === 0) {
             containerEl.innerHTML = `<div style="text-align:center; color:#95a5a6; padding:20px;">此類別目前沒有任何設備</div>`;
@@ -243,9 +321,7 @@
                 const card = document.createElement('div');
                 card.className = "device-item-card";
                 card.onclick = function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    locateDeviceOnMap(p.id);
+                    e.preventDefault(); e.stopPropagation(); locateDeviceOnMap(p.id);
                 };
                 card.innerHTML = `
                     <div class="device-item-left">
@@ -293,13 +369,31 @@
 
     document.getElementById('load-project').onchange = function(e) {
         const file = e.target.files[0]; if(!file) return;
-        showStatus("⏳ 正在強制導入大檔案專案...");
+        showStatus("⏳ 正在導入盤查專案...");
         const reader = new FileReader();
         reader.onload = function(event) {
             try {
                 const data = JSON.parse(event.target.result);
                 currentMapDataUrl = data.mapImage || data.mapDataUrl || "";
-                points = data.savedPoints || data.points || [];
+                
+                // 👑 相容舊格式與新每月格式
+                if (data.monthlyRecords) {
+                    monthlyRecords = data.monthlyRecords;
+                } else {
+                    // 若是舊版單一陣列，自動歸入當前月份
+                    monthlyRecords = {};
+                    let d = new Date();
+                    let m = (d.getMonth() + 1).toString().padStart(2, '0');
+                    let mKey = `${d.getFullYear()}-${m}`;
+                    monthlyRecords[mKey] = data.savedPoints || data.points || [];
+                }
+
+                // 抓出最新或第一個月份
+                let keys = Object.keys(monthlyRecords);
+                if(keys.length > 0) {
+                    currentMonth = keys.sort().reverse()[0];
+                    points = monthlyRecords[currentMonth];
+                }
 
                 if (currentMapDataUrl) {
                     const img = new Image();
@@ -308,17 +402,15 @@
                         canvas.style.width = img.width + "px"; canvas.style.height = img.height + "px";
                         ctx.clearRect(0, 0, canvas.width, canvas.height);
                         ctx.drawImage(img, 0, 0);
+                        refreshMonthSelect();
                         renderPoints();
-                        showStatus(`✅ 成功載入！共 ${points.length} 個點位`);
+                        showStatus(`✅ 載入成功！包含 ${Object.keys(monthlyRecords).length} 個月份歷史紀錄`);
                         resetView();
                     };
                     img.src = currentMapDataUrl;
-                } else {
-                    initDefaultCanvas(); renderPoints(); showStatus(`⚠️ 點位已載入(${points.length}個)，但無底圖`);
                 }
             } catch(err) {
                 alert("專案檔案解析失敗");
-                showStatus("❌ 載入失敗");
             }
         };
         reader.readAsText(file);
@@ -326,7 +418,6 @@
 
     document.getElementById('upload').onchange = function(e) {
         const file = e.target.files[0]; if(!file) return;
-        showStatus("⏳ 新底圖載入中...");
         const reader = new FileReader();
         reader.onload = (event) => { 
             const img = new Image();
@@ -345,6 +436,10 @@
     function resetView() { mapScale = 0.5; mapX = 10; mapY = 50; updateTransform(); }
 
     function toggleAddMode(type) {
+        let d = new Date();
+        let thisMonthStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+        if (currentMonth !== thisMonthStr) { alert("歷史紀錄模式下，無法新增設備。請先切換回本月。"); return; }
+        
         if (isAddMode && addType === type) { isAddMode = false; addType = ''; } 
         else { isAddMode = true; addType = type; }
         document.getElementById('add-ext-btn').classList.toggle('active', addType === 'ext');
@@ -396,6 +491,8 @@
             let startClientX = 0, startClientY = 0, startLeft = 0, startTop = 0;
 
             function onMove(moveX, moveY) {
+                let d = new Date();
+                if (currentMonth !== `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`) return; // 👑 歷史紀錄禁拖曳
                 isDraggingIcon = true;
                 let currentLeft = startLeft + (moveX - startClientX) / mapScale;
                 let currentTop = startTop + (moveY - startClientY) / mapScale;
@@ -432,8 +529,7 @@
         updateDashboard();
     }
 
-    let lastTouchX = 0, lastTouchY = 0, touchStartDist = 0;
-    
+    let isPanningView = false;
     viewport.addEventListener('touchstart', (e) => {
         if(isAddMode) return;
         if(e.touches.length === 1) { isPanning = true; lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY; }
@@ -465,32 +561,48 @@
     function openModal(p) {
         currentPoint = p; document.getElementById('m-name').value = p.name || '';
         const listArea = document.getElementById('check-list-area'); listArea.innerHTML = ''; 
+        
+        let d = new Date();
+        let thisMonthStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+        let isHistory = currentMonth !== thisMonthStr;
+
+        // 👑 唯讀控制
+        document.getElementById('m-name').disabled = isHistory;
+        document.getElementById('m-type').disabled = isHistory;
+        document.getElementById('m-mfg-date').disabled = isHistory;
+        document.getElementById('modal-save-btn').style.display = isHistory ? 'none' : 'block';
+        document.getElementById('modal-delete-btn').style.display = isHistory ? 'none' : 'block';
+
         if (p.kind === 'ext' || p.kind === undefined) {
             document.getElementById('m-type').value = p.type || '10P 乾粉'; document.getElementById('m-mfg-date').value = p.mfgDate || '';
             document.getElementById('ext-specs-area').style.display = 'block'; document.getElementById('hyd-specs-area').style.display = 'none';
-            extCheckItems.forEach((item, i) => addCheckRow(listArea, item, i+1, p));
+            extCheckItems.forEach((item, i) => addCheckRow(listArea, item, i+1, p, isHistory));
             checkExpiryInModal();
         } else {
             document.getElementById('m-hyd-count').value = p.hoseCount || '1';
+            document.getElementById('m-hyd-count').disabled = isHistory;
             document.getElementById('ext-specs-area').style.display = 'none'; document.getElementById('hyd-specs-area').style.display = 'block';
-            generateHoseDateInputs();
-            hydCheckItems.forEach((item, i) => addCheckRow(listArea, item, i+1, p));
+            generateHoseDateInputs(isHistory);
+            hydCheckItems.forEach((item, i) => addCheckRow(listArea, item, i+1, p, isHistory));
         }
         document.getElementById('modal').style.display = 'block'; document.getElementById('overlay').style.display = 'block';
     }
 
-    function addCheckRow(targetEl, item, order, p) {
+    function addCheckRow(targetEl, item, order, p, isHistory) {
         const res = (p.results && p.results[item]) ? p.results[item] : ''; 
         const note = (p.notes && p.notes[item]) ? p.notes[item] : '';
-        targetEl.innerHTML += `<div class="check-row" data-item="${item}"><div class="check-header"><span>${order}.${item}</span><div class="ox-group"><button class="btn-o ${res==='O'?'active-o':''}" onclick="setOX(this,'O')">O</button><button class="btn-x ${res==='X'?'active-x':''}" onclick="setOX(this,'X')">X</button></div></div><input type="text" class="fail-input" style="display:${res==='X'?'block':'none'};" value="${note}" placeholder="異常描述..."></div>`;
+        let disAttr = isHistory ? 'disabled' : '';
+        targetEl.innerHTML += `<div class="check-row" data-item="${item}"><div class="check-header"><span>${order}.${item}</span><div class="ox-group"><button class="btn-o ${res==='O'?'active-o':''}" ${disAttr} onclick="setOX(this,'O')">O</button><button class="btn-x ${res==='X'?'active-x':''}" ${disAttr} onclick="setOX(this,'X')">X</button></div></div><input type="text" class="fail-input" ${disAttr} style="display:${res==='X'?'block':'none'};" value="${note}" placeholder="異常描述..."></div>`;
     }
 
     function setOX(btn, status) { const row = btn.closest('.check-row'); row.querySelectorAll('button').forEach(b => b.classList.remove('active-o', 'active-x')); btn.classList.add(status==='O'?'active-o':'active-x'); row.querySelector('.fail-input').style.display = (status==='X')?'block':'none'; }
-    function generateHoseDateInputs() {
+    
+    function generateHoseDateInputs(isHistory) {
         const count = parseInt(document.getElementById('m-hyd-count').value) || 1; const box = document.getElementById('hose-dates-box'); box.innerHTML = '';
         let savedDates = currentPoint.hoseDates || [];
+        let disAttr = isHistory ? 'disabled' : '';
         for(let i=0; i<count; i++) {
-            box.innerHTML += `<div class="hose-date-item"><span>水帶${i+1}:</span><input type="date" class="m-hyd-date-input" value="${savedDates[i]||''}" onchange="checkHydHoseExpiryInModal()"></div>`;
+            box.innerHTML += `<div class="hose-date-item"><span>水帶${i+1}:</span><input type="date" ${disAttr} class="m-hyd-date-input" value="${savedDates[i]||''}" onchange="checkHydHoseExpiryInModal()"></div>`;
         }
         checkHydHoseExpiryInModal();
     }
@@ -525,43 +637,24 @@
     function checkHydHoseExpiryInModal() { let exp=false; document.querySelectorAll('.m-hyd-date-input').forEach(i => { if(i.value && calculateExpiryStatus(i.value,10).status==='expired') exp=true; }); document.getElementById('hyd-expiry-msg').innerText = exp?"❌ 有水帶逾期(10年)":"✅ 效期正常"; }
     function checkExpiryInModal() { let d=document.getElementById('m-mfg-date').value; document.getElementById('modal-expiry-msg').innerText = (d && calculateExpiryStatus(d,3).status==='expired')?"❌ 已超3年效期":"✅ 效期正常"; }
     function closeModal() { document.getElementById('modal').style.display='none'; document.getElementById('overlay').style.display='none'; renderPoints(); }
-    function deletePoint() { if(confirm('確定刪除？')) { points = points.filter(p => p.id !== currentPoint.id); closeModal(); } }
+    function deletePoint() { if(confirm('確定刪除？')) { points = points.filter(p => p.id !== currentPoint.id); monthlyRecords[currentMonth] = points; closeModal(); } }
     function showStatus(t) { statusTxt.innerText = t; }
 
+    // 👑 匯出包含完整「歷史期別」的大檔案專案
     function exportProjectJSON() {
         if(!currentMapDataUrl) return;
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ mapImage: currentMapDataUrl, savedPoints: points }));
-        const a = document.createElement('a'); a.href = dataStr; a.download = "廠區消防專案_層級修復版.json"; a.click();
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ mapImage: currentMapDataUrl, monthlyRecords: monthlyRecords }));
+        const a = document.createElement('a'); a.href = dataStr; a.download = `廠區消防巡檢專案_含歷史紀錄_${currentMonth}.json`; a.click();
     }
 
     function exportJPG() {
         showStatus("⏳ 出圖中..."); const oldS = mapScale, oldX = mapX, oldY = mapY; mapScale = 1; mapX = 0; mapY = 0; updateTransform();
         setTimeout(() => {
             html2canvas(document.getElementById('capture-area'), { useCORS: true, scale: 1.5 }).then(res => {
-                const a = document.createElement('a'); a.download = '巡檢圖.jpg'; a.href = res.toDataURL('image/jpeg', 0.85); a.click();
+                const a = document.createElement('a'); a.download = `${currentMonth}_巡檢成果圖.jpg`; a.href = res.toDataURL('image/jpeg', 0.85); a.click();
                 mapScale = oldS; mapX = oldX; mapY = oldY; updateTransform(); showStatus("✅ 已匯出JPG");
             });
         }, 300);
-    }
-
-    function exportPDF() {
-        showStatus("⏳ 產生PDF..."); const oldS = mapScale, oldX = mapX, oldY = mapY; mapScale = 1; mapX = 0; mapY = 0; updateTransform();
-        setTimeout(() => {
-            html2canvas(document.getElementById('capture-area'), { useCORS: true, scale: 1.5 }).then(res => {
-                const { jsPDF } = window.jspdf; const pdf = new jsPDF('l', 'px', [res.width, res.height]);
-                pdf.addImage(res.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, res.width, res.height); pdf.save("巡檢圖.pdf");
-                mapScale = oldS; mapX = oldX; mapY = oldY; updateTransform(); showStatus("✅ 已匯出PDF");
-            });
-        }, 300);
-    }
-
-    function exportExcel() {
-        let csv = "\ufeff設施種類,設備名稱,規格,日期清單,巡檢狀態,異常摘要\n";
-        points.forEach(p => {
-            let notes = []; if(p.notes) { for(let k in p.notes) if(p.notes[k]) notes.push(`${k}:${p.notes[k]}`); }
-            csv += `${p.kind==='ext'?'滅火器':'消防栓'},${p.name||'未命名'},${p.kind==='ext'?p.type:p.hoseCount+'條'},${p.kind==='ext'?p.mfgDate:p.hoseDates.join('|')},${p.inspected?(getPointStatus(p)==='ok'?'合格':'不合格'):'未巡'},"${notes.join('/')}"\n`;
-        });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'})); a.download = '巡檢紀錄.csv'; a.click();
     }
 </script>
 </body>
